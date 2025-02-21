@@ -1,0 +1,11 @@
+-- los index se usan en sql para mejorar la velocidad de las consultas
+-- se pueden crear en una o varias columnas
+-- is like a indice de un book
+--index types
+--clustered
+--nonclustered
+-- composite index: index that is created on more than one column
+-- inuque undex: index that does not allow duplicate values
+-- primary key: index that enforces the uniqueness of a column, se crea una clave primaria en la tabla
+-- unique: index that enforces the uniqueness of a column, se crea un index unico en la tabla
+-- covering index: index that includes all the columns that are needed to execute a query
