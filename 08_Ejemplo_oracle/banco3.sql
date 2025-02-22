@@ -221,3 +221,207 @@ VALUES (6001, 'Campaña Primavera', TO_DATE('2023-03-01','YYYY-MM-DD'), TO_DATE(
 INSERT INTO CLIENTES_POTENCIALES3 (potencial_id, nombre, apellido, email, telefono, fuente)
 VALUES (600101, 'Luis', 'Sánchez', 'luis.sanchez@prospecto.com', '555-0404', 'WEB');
 
+-----------------------------------------------------------------------------------
+select
+    c.nombre,
+    sum(cc.monto) as total_creditos
+from
+    clientes3 c
+inner join
+    creditos3 cc
+on
+    c.cliente_id=cc.cliente_id
+group by
+    c.nombre
+having
+    sum(cc.monto)>10000
+
+--------------------------------------------------------------------------------
+select
+    c.nombre,
+    c.apellido,
+    cc.saldo
+from
+    clientes3 c
+inner join
+    cuentas3 cc
+on
+    c.cliente_id=cc.cliente_id
+group by
+    c.nombre,
+    c.apellido,
+    cc.saldo
+having
+    cc.saldo > (select AVG(saldo) from cuentas3)
+--------------------------------------------------------------------------------
+SELECT c.cliente_id, c.nombre, c.apellido, cu.saldo
+FROM CLIENTES c
+JOIN CUENTAS cu ON c.cliente_id = cu.cliente_id
+WHERE cu.saldo > (SELECT AVG(saldo) FROM CUENTAS);
+--------------------------------------------------------------------------------
+select
+    c.nombre,
+    d.cantidad,
+    p.nombre_producto,
+    f.total
+from
+    clientes3 c
+inner join
+    facturas3 f
+on
+    c.cliente_id=f.cliente_id
+inner join
+    DETALLE_FACTURA3 d
+on
+    f.factura_id=d.factura_id
+inner join
+    PRODUCTOS3 p
+on
+    d.producto_id=p.producto_id
+--------------------------------------------------------------------------------
+--Necesito obtener una lista que muestre, para cada cliente, su nombre y apellido, junto con el total de créditos aprobados (es decir, la suma de los montos de los créditos cuyo estado es 'APROBADO'). Además, solo se deben mostrar aquellos clientes cuyo total de créditos aprobados supere 10,000. El resultado debe estar ordenado de mayor a menor según el total de créditos.
+select
+    c.nombre,
+    c.apellido,
+    sum(cc.monto) as monto_total
+from
+    clientes3 c
+inner join
+    CREDITOS3 cc
+on 
+    c.cliente_id=cc.cliente_id
+where
+    cc.estado = 'APROBADO'
+group by
+    c.nombre,
+    c.apellido
+HAVING
+    sum(cc.monto) > 10000
+order by
+    sum(cc.monto) desc
+    
+--------------------------------------------------------------------------------
+select
+    p.producto_id,
+    p.nombre_producto,
+    sum(d.cantidad) as total_cantidad,
+    sum(d.cantidad * precio_unitario) as total_generado
+from
+    productos3 p
+inner join
+    DETALLE_FACTURA3 d
+on
+    p.producto_id=d.producto_id
+group by
+    p.producto_id,
+    p.nombre_producto
+HAVING
+    SUM(d.cantidad * d.precio_unitario) > 5000
+order by
+    sum(d.cantidad * precio_unitario) desc
+-------------------------------------------------------
+select
+    c.nombre,
+    c.apellido,
+    sum(tc.saldo_actual) as deuda_total
+from
+    clientes3 c
+inner join
+    TARJETAS_CREDITO3 tc
+on
+    c.cliente_id=tc.cliente_id
+where
+    tc.estado = 'ACTIVA'
+group by
+    c.nombre,
+    c.apellido
+having
+     SUM(tc.saldo_actual) > 0
+order by
+    sum(tc.saldo_actual) desc
+---------------------------------------------------------------------
+--clientes con total de cuentas y total de saldos
+select
+    c.nombre,
+    c.apellido,
+    cc.tipo_cuenta,
+    count(cuenta_id) as total_cuentas,
+    sum(cc.saldo) as total_saldo
+from
+    clientes3 c
+inner join
+    CUENTAS3 cc
+on
+    c.cliente_id=cc.cliente_id
+group by
+    c.nombre,
+    c.apellido,
+    cc.tipo_cuenta
+having
+    sum(cc.saldo) >5000
+order by
+    sum(cc.saldo) desc
+------------------------------------------------------------------------------
+
+
+
+
+--procedimientos almacenados
+--procedimiento para buscar el saldo de una cuenta
+CREATE OR REPLACE PROCEDURE obtener_saldo_cliente (
+    p_cliente_id IN NUMBER,      -- ID del cliente (entrada)
+    p_saldo_total OUT NUMBER     -- Saldo total (salida)
+) AS
+BEGIN
+    -- Calculamos el saldo total sumando los saldos de sus cuentas
+    SELECT NVL(SUM(saldo), 0)
+    INTO p_saldo_total
+    FROM CUENTAS3
+    WHERE cliente_id = p_cliente_id;
+END obtener_saldo_cliente;
+------------------
+EXEC obtener_saldo_cliente(1, :v_saldo);
+PRINT v_saldo;
+
+
+---obtener saldo total
+CREATE OR REPLACE PROCEDURE obtener_total_saldo (
+    p_cliente_id IN number,
+    p_total OUT NUMBER 
+)AS
+BEGIN
+    select NVL(SUM(saldo), 0)
+    into p_total
+    from cuentas3
+    where p_cliente_id=cliente_id;
+END obtener_total_saldo;
+------------------------------------------------
+VARIABLE saldo NUMBER;
+EXEC obtener_total_saldo(1,:saldo);
+print saldo;
+-------------------------------
+---retornar el saldo y la cantidad de cuentas del cliente
+create or replace procedure saldo_cuentas(
+    p_cliente_id in number,
+    p_saldo out number,
+    p_cuentas out number
+)as
+begin
+    select 
+        nvl(sum(saldo),0), 
+        count(*)
+    into
+        p_saldo, 
+        p_cuentas
+    from
+        cuentas3
+    where cliente_id=p_cliente_id;
+end saldo_cuentas;
+/
+-----------------------------
+variable c1 number;
+variable cc number;
+exec saldo_cuentas(1, :c1, :cc);
+print c1
+print cc
+--------------------------------
